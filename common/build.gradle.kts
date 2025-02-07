@@ -69,6 +69,12 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+    afterEvaluate {
+        tasks.register("sourcesJar", Jar::class.java) {
+            archiveClassifier.set("sources")
+            from(android.sourceSets.getByName("main").java.srcDirs)
+        }
+    }
 }
 
 dependencies {
