@@ -73,6 +73,11 @@ android {
 }
 
 dependencies {
+    val ktorVersion = "2.3.2"
+
+    implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+
     implementation(project(":common"))
 
     implementation("androidx.core:core-ktx:1.12.0")

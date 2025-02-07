@@ -17,6 +17,7 @@
 package com.google.ai.client.generativeai
 
 import android.graphics.Bitmap
+import io.ktor.client.HttpClient
 import com.google.ai.client.generativeai.common.APIController
 import com.google.ai.client.generativeai.common.CountTokensRequest
 import com.google.ai.client.generativeai.common.GenerateContentRequest
@@ -77,6 +78,7 @@ internal constructor(
     tools: List<Tool>? = null,
     toolConfig: ToolConfig? = null,
     systemInstruction: Content? = null,
+    httpClient: HttpClient
   ) : this(
     fullModelName(modelName),
     apiKey,
@@ -91,6 +93,7 @@ internal constructor(
       modelName,
       requestOptions.toInternal(),
       "genai-android/${BuildConfig.VERSION_NAME}",
+      httpClient,
     ),
   )
 

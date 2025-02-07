@@ -24,11 +24,6 @@ import com.google.ai.client.generativeai.common.util.fullModelName
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -38,12 +33,8 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.ByteChannel
 import kotlin.time.Duration
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.TimeoutCancellationException
@@ -66,7 +57,7 @@ internal val JSON = Json {
  *
  * This class handles making HTTP requests to the API and streaming the responses back.
  *
- * @param httpEngine The HTTP client engine to be used for making requests. Defaults to CIO engine.
+ * @param client The HTTP client engine to be used for making requests. Defaults to CIO engine.
  *   Exposed primarily for DI in tests.
  * @property key The API key used for authentication.
  * @property model The model to use for generation.
@@ -74,11 +65,11 @@ internal val JSON = Json {
  * @property headerProvider A provider that generates extra headers to include in all HTTP requests.
  */
 class APIController
-internal constructor(
+constructor(
   private val key: String,
   model: String,
   private val requestOptions: RequestOptions,
-  httpEngine: HttpClientEngine,
+  private val client: HttpClient,
   private val apiClient: String,
   private val headerProvider: HeaderProvider?,
 ) {
@@ -88,8 +79,9 @@ internal constructor(
     model: String,
     requestOptions: RequestOptions,
     apiClient: String,
+    client: HttpClient,
     headerProvider: HeaderProvider? = null,
-  ) : this(key, model, requestOptions, OkHttp.create(), apiClient, headerProvider)
+  ) : this(key, model, requestOptions, client, apiClient, headerProvider)
 
   @VisibleForTesting(otherwise = VisibleForTesting.NONE)
   constructor(
@@ -98,27 +90,17 @@ internal constructor(
     requestOptions: RequestOptions,
     apiClient: String,
     headerProvider: HeaderProvider?,
-    channel: ByteChannel,
-    status: HttpStatusCode,
+    testEngine: HttpClientEngine,
   ) : this(
     key,
     model,
     requestOptions,
-    MockEngine { respond(channel, status, headersOf(HttpHeaders.ContentType, "application/json")) },
+    HttpClient(testEngine),
     apiClient,
     headerProvider,
   )
 
   private val model = fullModelName(model)
-
-  private val client =
-    HttpClient(httpEngine) {
-      install(HttpTimeout) {
-        requestTimeoutMillis = requestOptions.timeout.inWholeMilliseconds
-        socketTimeoutMillis = 80_000
-      }
-      install(ContentNegotiation) { json(JSON) }
-    }
 
   suspend fun generateContent(request: GenerateContentRequest): GenerateContentResponse =
     try {
